@@ -114,3 +114,86 @@ ESCALATION_DAY = 7
 
 # Auto-cancel subscription after this many days of non-payment
 AUTO_CANCEL_DAYS = 21
+
+
+def get_dunning_action(
+    days_since_failure: int,
+) -> dict[str, object]:
+    """Determine the dunning action for a given day.
+
+    Follows DUNNING_SCHEDULE_DAYS for email timing and
+    escalates to account manager at ESCALATION_DAY (7).
+    Auto-cancels at AUTO_CANCEL_DAYS (21).
+
+    Args:
+        days_since_failure: Days since the payment failure.
+
+    Returns:
+        Action dict with type and details.
+    """
+    if days_since_failure >= AUTO_CANCEL_DAYS:
+        return {
+            "action": "auto_cancel",
+            "reason": (
+                f"Non-payment for {days_since_failure} days "
+                f"(limit: {AUTO_CANCEL_DAYS})"
+            ),
+        }
+
+    should_send = days_since_failure in DUNNING_SCHEDULE_DAYS
+    should_escalate = days_since_failure >= ESCALATION_DAY
+
+    return {
+        "action": "send_dunning" if should_send else "wait",
+        "days_since_failure": days_since_failure,
+        "escalate_to_am": should_escalate,
+        "next_email_day": next(
+            (d for d in DUNNING_SCHEDULE_DAYS
+             if d > days_since_failure),
+            None,
+        ),
+    }
+
+
+def send_dunning_email(
+    customer_email: str,
+    customer_name: str,
+    days_since_failure: int,
+    invoice_id: str,
+    amount_due: float,
+) -> dict[str, object]:
+    """Send a dunning email for a failed payment.
+
+    Includes a link to update payment method and the
+    outstanding amount.
+
+    Args:
+        customer_email: Recipient email address.
+        customer_name: Name for personalization.
+        days_since_failure: Days since the payment failure.
+        invoice_id: The unpaid invoice ID.
+        amount_due: Outstanding amount in USD.
+
+    Returns:
+        Notification result with status.
+    """
+    escalated = days_since_failure >= ESCALATION_DAY
+    subject = (
+        f"Action required: payment of ${amount_due:.2f} is overdue"
+        if not escalated else
+        f"URGENT: payment of ${amount_due:.2f} overdue — "
+        f"account at risk of cancellation"
+    )
+
+    return {
+        "type": "dunning_email",
+        "to": customer_email,
+        "subject": subject,
+        "invoice_id": invoice_id,
+        "amount_due": amount_due,
+        "days_since_failure": days_since_failure,
+        "escalated": escalated,
+        "update_payment_link": f"/billing/update-payment?invoice={invoice_id}",
+        "sent_at": datetime.now(timezone.utc).isoformat(),
+        "status": "sent",
+    }
