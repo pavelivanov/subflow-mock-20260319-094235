@@ -40,3 +40,13 @@ SUPPORTED_CURRENCIES = ["USD", "EUR", "GBP", "CAD", "AUD"]
 
 # Spread added on top of daily exchange rate (percentage)
 CURRENCY_SPREAD_PERCENT = 1.0
+
+# Bulk discount tiers: minimum seats -> discount percentage
+BULK_DISCOUNT_TIERS: dict[int, float] = {
+    10: 0.10,   # 10+ seats: 10% discount
+    50: 0.15,   # 50+ seats: 15% discount
+    100: 0.20,  # 100+ seats: 20% discount
+}
+
+# Above this seat count, use custom pricing (no automatic discount)
+CUSTOM_PRICING_THRESHOLD = 250

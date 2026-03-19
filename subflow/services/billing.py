@@ -322,3 +322,49 @@ def lock_invoice_currency(
             invoice.total_amount * exchange_rate, 2,
         ),
     }
+
+
+def calculate_bulk_discount(
+    seat_count: int,
+) -> dict[str, object] | None:
+    """Calculate the bulk discount for a given seat count.
+
+    Discount tiers (from BULK_DISCOUNT_TIERS):
+        - 10+ seats: 10%% discount
+        - 50+ seats: 15%% discount
+        - 100+ seats: 20%% discount
+        - 250+ seats: custom pricing required (returns None)
+
+    Args:
+        seat_count: Number of seats being purchased.
+
+    Returns:
+        Discount details, or None if above the custom pricing
+        threshold (250 seats).
+    """
+    from subflow.config import BULK_DISCOUNT_TIERS, CUSTOM_PRICING_THRESHOLD
+
+    if seat_count >= CUSTOM_PRICING_THRESHOLD:
+        return None  # Custom pricing required
+
+    applicable_discount = 0.0
+    applicable_tier = 0
+    for min_seats in sorted(BULK_DISCOUNT_TIERS.keys()):
+        if seat_count >= min_seats:
+            applicable_discount = BULK_DISCOUNT_TIERS[min_seats]
+            applicable_tier = min_seats
+        else:
+            break
+
+    if applicable_discount == 0.0:
+        return {
+            "seat_count": seat_count,
+            "discount_percent": 0.0,
+            "tier": None,
+        }
+
+    return {
+        "seat_count": seat_count,
+        "discount_percent": applicable_discount * 100,
+        "tier": f"{applicable_tier}+ seats",
+    }
