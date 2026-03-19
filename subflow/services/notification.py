@@ -104,3 +104,13 @@ def send_trial_ending_warning(
         "sent_at": datetime.now(timezone.utc).isoformat(),
         "status": "sent",
     }
+
+
+# Days after payment failure to send dunning emails
+DUNNING_SCHEDULE_DAYS = [1, 3, 7, 14]
+
+# Day threshold for escalation to account manager
+ESCALATION_DAY = 7
+
+# Auto-cancel subscription after this many days of non-payment
+AUTO_CANCEL_DAYS = 21
