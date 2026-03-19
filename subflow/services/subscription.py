@@ -121,3 +121,33 @@ def create_subscription(
         current_period_start=now,
         current_period_end=now + timedelta(days=period_days),
     )
+
+
+# Maximum number of days a subscription can stay paused
+MAX_PAUSE_DURATION_DAYS = 90
+
+
+def pause_subscription(
+    subscription: Subscription,
+) -> Subscription:
+    """Pause a subscription.
+
+    Pausing is not allowed during the trial period. Maximum
+    pause duration is MAX_PAUSE_DURATION_DAYS (90 days).
+    After 90 days the subscription will be auto-cancelled.
+
+    Args:
+        subscription: The subscription to pause.
+
+    Returns:
+        The updated subscription.
+
+    Raises:
+        ValueError: If subscription is in trial or not active.
+    """
+    if subscription.status == "trial":
+        raise ValueError(
+            "Cannot pause during trial period. "
+            "Please convert to a paid plan first."
+        )
+    return transition_subscription(subscription, "paused")
