@@ -145,3 +145,104 @@ def calculate_downgrade_credit(
     price_diff = old_price - new_price
     daily_rate = price_diff / days_in_cycle
     return round(daily_rate * days_remaining, 2)
+
+
+# Maximum refund percentage (100% = full refund as credit)
+MAX_REFUND_PERCENT = 100
+
+# Reject credit note requests for invoices older than this
+MAX_REFUND_AGE_DAYS = 365
+
+
+def issue_credit_note(
+    invoice: Invoice,
+    amount: float,
+    reason: str = "",
+) -> dict[str, object]:
+    """Issue a credit note for a partial refund on an invoice.
+
+    Credit notes are applied to the next invoice rather than
+    refunded as cash. The amount cannot exceed the invoice total
+    (MAX_REFUND_PERCENT = 100%%) and invoices older than
+    MAX_REFUND_AGE_DAYS (365 days) are rejected.
+
+    Args:
+        invoice: The original invoice to credit.
+        amount: Credit amount in USD.
+        reason: Reason for the credit.
+
+    Returns:
+        Credit note details.
+
+    Raises:
+        ValueError: If amount exceeds invoice total or invoice
+            is too old.
+    """
+    max_credit = invoice.total_amount * (MAX_REFUND_PERCENT / 100)
+    if amount > max_credit:
+        raise ValueError(
+            f"Credit amount ${amount:.2f} exceeds maximum "
+            f"${max_credit:.2f} ({MAX_REFUND_PERCENT}%% of invoice)"
+        )
+
+    if invoice.issued_at is not None:
+        now = datetime.now(timezone.utc)
+        age_days = (now - invoice.issued_at).days
+        if age_days > MAX_REFUND_AGE_DAYS:
+            raise ValueError(
+                f"Invoice is {age_days} days old — exceeds "
+                f"maximum refund age of {MAX_REFUND_AGE_DAYS} days"
+            )
+
+    return {
+        "invoice_id": invoice.id,
+        "customer_id": invoice.customer_id,
+        "credit_amount": round(amount, 2),
+        "reason": reason,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "applied": False,
+    }
+
+
+def apply_credits_to_invoice(
+    invoice: Invoice,
+    available_credits: list[dict],
+) -> dict[str, object]:
+    """Apply outstanding credits to an invoice.
+
+    Credits are auto-applied to the next invoice, reducing the
+    amount due. Multiple credits can be applied to one invoice.
+
+    Args:
+        invoice: The invoice to apply credits to.
+        available_credits: List of unused credit note dicts.
+
+    Returns:
+        Summary of applied credits and new invoice total.
+    """
+    total_credits = 0.0
+    applied = []
+    for credit in available_credits:
+        if credit.get("applied"):
+            continue
+        credit_amount = credit["credit_amount"]
+        remaining_due = invoice.total_amount - total_credits
+        if remaining_due <= 0:
+            break
+        apply_amount = min(credit_amount, remaining_due)
+        total_credits += apply_amount
+        credit["applied"] = True
+        credit["applied_to_invoice_id"] = invoice.id
+        applied.append({
+            "credit_invoice_id": credit["invoice_id"],
+            "amount_applied": round(apply_amount, 2),
+        })
+
+    new_total = max(0.0, invoice.total_amount - total_credits)
+    return {
+        "invoice_id": invoice.id,
+        "original_total": invoice.total_amount,
+        "credits_applied": round(total_credits, 2),
+        "new_total": round(new_total, 2),
+        "credit_details": applied,
+    }
