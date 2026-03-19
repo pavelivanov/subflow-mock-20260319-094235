@@ -151,3 +151,73 @@ def pause_subscription(
             "Please convert to a paid plan first."
         )
     return transition_subscription(subscription, "paused")
+
+
+def resume_subscription(
+    subscription: Subscription,
+) -> Subscription:
+    """Resume a paused subscription.
+
+    Transitions the subscription back to active status and
+    resets the billing period to start from today.
+
+    Args:
+        subscription: The paused subscription to resume.
+
+    Returns:
+        The resumed subscription.
+
+    Raises:
+        ValueError: If the subscription is not currently paused.
+    """
+    if subscription.status != "paused":
+        raise ValueError(
+            f"Cannot resume subscription in {subscription.status!r} "
+            "status — must be paused."
+        )
+    now = datetime.now(timezone.utc)
+    subscription.status = "active"
+    subscription.current_period_start = now
+    subscription.current_period_end = now + timedelta(days=30)
+    return subscription
+
+
+def check_pause_expiry(
+    subscription: Subscription,
+    paused_at: datetime,
+) -> dict[str, object]:
+    """Check if a paused subscription has exceeded the max pause duration.
+
+    If the subscription has been paused for more than
+    MAX_PAUSE_DURATION_DAYS (90 days), it is automatically
+    cancelled.
+
+    Args:
+        subscription: The paused subscription to check.
+        paused_at: When the subscription was paused.
+
+    Returns:
+        A dict with expiry status and action taken.
+    """
+    if subscription.status != "paused":
+        return {"action": "none", "reason": "Not paused"}
+
+    now = datetime.now(timezone.utc)
+    days_paused = (now - paused_at).days
+
+    if days_paused > MAX_PAUSE_DURATION_DAYS:
+        subscription.status = "cancelled"
+        return {
+            "action": "auto_cancelled",
+            "reason": (
+                f"Paused for {days_paused} days — exceeds "
+                f"maximum of {MAX_PAUSE_DURATION_DAYS} days"
+            ),
+            "days_paused": days_paused,
+        }
+
+    return {
+        "action": "none",
+        "days_paused": days_paused,
+        "days_remaining": MAX_PAUSE_DURATION_DAYS - days_paused,
+    }
