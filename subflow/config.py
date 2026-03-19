@@ -34,3 +34,9 @@ TRIAL_REQUIRES_PAYMENT_METHOD = False
 BILLING_CYCLE_DEFAULT = "monthly"
 INVOICE_DUE_DAYS = 15
 MAX_PLANS = 3
+
+# Supported currencies for billing
+SUPPORTED_CURRENCIES = ["USD", "EUR", "GBP", "CAD", "AUD"]
+
+# Spread added on top of daily exchange rate (percentage)
+CURRENCY_SPREAD_PERCENT = 1.0
