@@ -1,11 +1,14 @@
 """API route definitions for the SubFlow platform.
 
 Defines endpoint handlers for subscription management,
-billing, and customer operations. These are framework-agnostic
-handler functions (not tied to Flask/FastAPI).
+billing, webhook registration, and customer operations.
+These are framework-agnostic handler functions (not tied
+to Flask/FastAPI).
 """
 
 from __future__ import annotations
+
+from subflow.services.webhook import WEBHOOK_EVENTS
 
 
 def create_subscription_endpoint(
@@ -80,4 +83,42 @@ def list_invoices_endpoint(
         "customer_id": customer_id,
         "status_filter": status_filter,
         "invoices": [],
+    }
+
+
+def register_webhook_endpoint(
+    customer_id: str,
+    endpoint_url: str,
+    events: list[str] | None = None,
+) -> dict[str, object]:
+    """Handle POST /webhooks — register a webhook endpoint.
+
+    Registers a URL to receive webhook events. If no specific
+    events are listed, all events are subscribed.
+
+    Args:
+        customer_id: The customer registering the webhook.
+        endpoint_url: The URL to deliver events to.
+        events: List of event types to subscribe to.
+
+    Returns:
+        Registration confirmation with subscribed events.
+
+    Raises:
+        ValueError: If any requested event is not supported.
+    """
+    subscribed = events if events else list(WEBHOOK_EVENTS)
+
+    invalid = [e for e in subscribed if e not in WEBHOOK_EVENTS]
+    if invalid:
+        raise ValueError(
+            f"Unknown webhook events: {invalid}. "
+            f"Supported: {WEBHOOK_EVENTS}"
+        )
+
+    return {
+        "status": "registered",
+        "customer_id": customer_id,
+        "endpoint_url": endpoint_url,
+        "subscribed_events": subscribed,
     }
