@@ -246,3 +246,79 @@ def apply_credits_to_invoice(
         "new_total": round(new_total, 2),
         "credit_details": applied,
     }
+
+
+def convert_currency(
+    amount: float,
+    from_currency: str,
+    to_currency: str,
+    daily_rate: float,
+) -> dict[str, object]:
+    """Convert an amount between currencies.
+
+    Applies the daily exchange rate plus a spread of
+    CURRENCY_SPREAD_PERCENT (1.0%%). The spread covers FX risk.
+
+    Args:
+        amount: Amount in the source currency.
+        from_currency: Source currency code (e.g. "USD").
+        to_currency: Target currency code (e.g. "EUR").
+        daily_rate: The day's exchange rate (from -> to).
+
+    Returns:
+        Conversion details including the spread and final amount.
+    """
+    from subflow.config import CURRENCY_SPREAD_PERCENT, SUPPORTED_CURRENCIES
+
+    if from_currency not in SUPPORTED_CURRENCIES:
+        raise ValueError(f"Unsupported currency: {from_currency!r}")
+    if to_currency not in SUPPORTED_CURRENCIES:
+        raise ValueError(f"Unsupported currency: {to_currency!r}")
+
+    spread_factor = 1 + (CURRENCY_SPREAD_PERCENT / 100)
+    effective_rate = daily_rate * spread_factor
+    converted = round(amount * effective_rate, 2)
+
+    return {
+        "from_currency": from_currency,
+        "to_currency": to_currency,
+        "original_amount": amount,
+        "daily_rate": daily_rate,
+        "spread_percent": CURRENCY_SPREAD_PERCENT,
+        "effective_rate": round(effective_rate, 6),
+        "converted_amount": converted,
+    }
+
+
+def lock_invoice_currency(
+    invoice: Invoice,
+    currency: str,
+    exchange_rate: float,
+) -> dict[str, object]:
+    """Lock the currency and exchange rate for an invoice.
+
+    Currency is locked at invoice creation time. Subsequent
+    exchange rate changes do not affect the invoice amount.
+
+    Args:
+        invoice: The invoice to lock.
+        currency: The currency code to lock to.
+        exchange_rate: The exchange rate at lock time.
+
+    Returns:
+        Lock confirmation with details.
+    """
+    from subflow.config import SUPPORTED_CURRENCIES
+
+    if currency not in SUPPORTED_CURRENCIES:
+        raise ValueError(f"Unsupported currency: {currency!r}")
+
+    return {
+        "invoice_id": invoice.id,
+        "currency": currency,
+        "exchange_rate_locked": exchange_rate,
+        "locked_at": datetime.now(timezone.utc).isoformat(),
+        "amount_in_currency": round(
+            invoice.total_amount * exchange_rate, 2,
+        ),
+    }
