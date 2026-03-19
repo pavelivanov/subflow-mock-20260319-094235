@@ -185,3 +185,43 @@ def process_payment(
         "paid_at": now.isoformat(),
         "fraud_check": fraud_result,
     }
+
+
+# Retry schedule: hours after initial failure
+RETRY_SCHEDULE_HOURS = [1, 24, 72, 168]
+
+# Maximum number of retry attempts before suspension
+MAX_RETRIES = 4
+
+
+def schedule_retry(
+    invoice_id: str,
+    attempt_number: int,
+) -> dict[str, object]:
+    """Schedule a payment retry based on the attempt number.
+
+    Retries follow RETRY_SCHEDULE_HOURS: 1h, 24h, 72h, 168h
+    after the initial failure.
+
+    Args:
+        invoice_id: The invoice that failed payment.
+        attempt_number: Which retry attempt this is (1-based).
+
+    Returns:
+        A dict with retry_at (hours from now) and attempt info.
+        Returns None-like dict if max retries exceeded.
+    """
+    if attempt_number > MAX_RETRIES:
+        return {
+            "invoice_id": invoice_id,
+            "action": "suspend",
+            "reason": f"Exceeded {MAX_RETRIES} retry attempts",
+        }
+
+    hours = RETRY_SCHEDULE_HOURS[attempt_number - 1]
+    return {
+        "invoice_id": invoice_id,
+        "action": "retry",
+        "attempt": attempt_number,
+        "retry_after_hours": hours,
+    }
