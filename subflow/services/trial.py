@@ -3,6 +3,8 @@
 Handles trial lifecycle: starting trials, checking status,
 and converting trials to paid subscriptions. Enforces
 payment method requirements before trial expiry.
+
+Trial duration is now per-tier (Free=14d, Pro=30d, Enterprise=30d).
 """
 
 from __future__ import annotations
@@ -16,13 +18,30 @@ from subflow.models.subscription import Subscription
 PAYMENT_METHOD_REQUIRED_BY_DAY = 25
 
 
+def get_trial_days(plan_tier: str) -> int:
+    """Return the trial duration in days for the given plan tier.
+
+    Handles both the legacy integer format and the current
+    per-tier dict format of TRIAL_PERIOD_DAYS.
+
+    Args:
+        plan_tier: The plan tier name (free, pro, enterprise).
+
+    Returns:
+        Number of trial days for the given tier.
+    """
+    if isinstance(TRIAL_PERIOD_DAYS, dict):
+        return TRIAL_PERIOD_DAYS.get(plan_tier, 14)
+    return TRIAL_PERIOD_DAYS
+
+
 def start_trial(
     subscription: Subscription,
 ) -> Subscription:
     """Start a trial period for a subscription.
 
     Sets the subscription status to trial and calculates the
-    trial end date based on TRIAL_PERIOD_DAYS.
+    trial end date based on the plan tier's trial duration.
 
     Args:
         subscription: The subscription to start trialing.
@@ -31,8 +50,9 @@ def start_trial(
         The updated subscription with trial dates set.
     """
     now = datetime.now(timezone.utc)
+    trial_days = get_trial_days(subscription.plan.name)
     subscription.status = "trial"
-    subscription.trial_end = now + timedelta(days=TRIAL_PERIOD_DAYS)
+    subscription.trial_end = now + timedelta(days=trial_days)
     subscription.current_period_start = now
     subscription.current_period_end = subscription.trial_end
     return subscription
@@ -48,7 +68,7 @@ def check_trial_status(
         - "active": Trial is still running, no action needed.
         - "convert": Trial has ended, ready to convert to paid.
         - "needs_payment_method": Trial is nearing end and payment
-          method is required before day PAYMENT_METHOD_REQUIRED_BY_DAY.
+          method is required.
 
     Args:
         subscription: The subscription to check.
@@ -61,6 +81,7 @@ def check_trial_status(
         return "active"
 
     now = datetime.now(timezone.utc)
+    trial_days = get_trial_days(subscription.plan.name)
     days_elapsed = (now - subscription.current_period_start).days
 
     # Trial has ended
@@ -68,10 +89,12 @@ def check_trial_status(
         return "convert"
 
     # Approaching trial end — payment method required
-    if (
-        days_elapsed >= PAYMENT_METHOD_REQUIRED_BY_DAY
-        and not has_payment_method
-    ):
+    # For short trials (< 25 days), require payment by 80%% of trial
+    payment_required_by = min(
+        PAYMENT_METHOD_REQUIRED_BY_DAY,
+        int(trial_days * 0.8),
+    )
+    if days_elapsed >= payment_required_by and not has_payment_method:
         return "needs_payment_method"
 
     return "active"

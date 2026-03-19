@@ -25,7 +25,11 @@ PLAN_TIERS: dict[str, dict] = {
     },
 }
 
-TRIAL_PERIOD_DAYS = 30
+TRIAL_PERIOD_DAYS: dict[str, int] = {
+    "free": 14,
+    "pro": 30,
+    "enterprise": 30,
+}
 TRIAL_REQUIRES_PAYMENT_METHOD = False
 BILLING_CYCLE_DEFAULT = "monthly"
 INVOICE_DUE_DAYS = 15
