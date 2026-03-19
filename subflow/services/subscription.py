@@ -1,8 +1,9 @@
 """Subscription lifecycle management service.
 
-Handles subscription creation, state transitions, and grace period
-logic. State transitions are validated against an explicit allow-list
-to prevent invalid status changes.
+Handles subscription creation, state transitions, grace period
+logic, suspension, and reactivation. State transitions are
+validated against an explicit allow-list to prevent invalid
+status changes.
 """
 
 from __future__ import annotations
@@ -22,11 +23,15 @@ GRACE_PERIOD_DAYS: dict[str, int] = {
 # Valid state transitions: current_state -> list of allowed next states
 VALID_TRANSITIONS: dict[str, list[str]] = {
     "trial": ["active", "cancelled"],
-    "active": ["paused", "cancelled", "expired"],
+    "active": ["paused", "cancelled", "expired", "suspended"],
     "paused": ["active", "cancelled"],
     "cancelled": [],
-    "expired": ["active"],
+    "expired": ["active", "suspended"],
+    "suspended": ["active"],
 }
+
+# Data retention period for suspended accounts
+DATA_RETENTION_DAYS = 90
 
 
 def transition_subscription(
@@ -383,4 +388,128 @@ def downgrade_subscription(
         "downgrades_remaining": (
             MAX_DOWNGRADES_PER_YEAR - downgrades_this_year - 1
         ),
+    }
+
+
+def suspend_subscription(
+    subscription: Subscription,
+    reason: str = "payment_failure",
+) -> dict[str, object]:
+    """Suspend a subscription after payment exhaustion.
+
+    Suspended subscriptions retain data for DATA_RETENTION_DAYS
+    (90 days). After that period, the account is archived.
+    Suspended differs from cancelled: suspended is recoverable
+    within the retention window by paying the outstanding balance.
+    Cancelled is voluntary and immediate.
+
+    Args:
+        subscription: The subscription to suspend.
+        reason: Reason for suspension.
+
+    Returns:
+        Suspension details including archival date.
+    """
+    now = datetime.now(timezone.utc)
+    archive_at = now + timedelta(days=DATA_RETENTION_DAYS)
+    transition_subscription(subscription, "suspended")
+
+    return {
+        "subscription_id": subscription.id,
+        "status": "suspended",
+        "reason": reason,
+        "suspended_at": now.isoformat(),
+        "data_retained_until": archive_at.isoformat(),
+        "retention_days": DATA_RETENTION_DAYS,
+        "recoverable": True,
+    }
+
+
+def reactivate_subscription(
+    subscription: Subscription,
+    outstanding_balance: float,
+) -> dict[str, object]:
+    """Reactivate a suspended subscription.
+
+    Reactivation requires clearing the outstanding balance to $0.
+    Only suspended subscriptions can be reactivated through this
+    path. The billing period resets upon reactivation.
+
+    Args:
+        subscription: The suspended subscription.
+        outstanding_balance: Current unpaid balance.
+
+    Returns:
+        Reactivation result.
+
+    Raises:
+        ValueError: If balance is not zero or subscription is
+            not suspended.
+    """
+    if subscription.status != "suspended":
+        raise ValueError(
+            f"Cannot reactivate subscription in "
+            f"{subscription.status!r} status — must be suspended."
+        )
+
+    if outstanding_balance > 0:
+        raise ValueError(
+            f"Outstanding balance of ${outstanding_balance:.2f} "
+            "must be cleared before reactivation."
+        )
+
+    now = datetime.now(timezone.utc)
+    subscription.status = "active"
+    subscription.current_period_start = now
+    subscription.current_period_end = now + timedelta(days=30)
+
+    return {
+        "subscription_id": subscription.id,
+        "status": "active",
+        "reactivated_at": now.isoformat(),
+        "new_period_start": now.isoformat(),
+        "new_period_end": (now + timedelta(days=30)).isoformat(),
+    }
+
+
+def archive_suspended_account(
+    subscription: Subscription,
+    suspended_at: datetime,
+) -> dict[str, object]:
+    """Archive a suspended account after the retention period.
+
+    After DATA_RETENTION_DAYS (90 days) of suspension, account
+    data is archived and the subscription is permanently cancelled.
+
+    Args:
+        subscription: The suspended subscription.
+        suspended_at: When the subscription was suspended.
+
+    Returns:
+        Archival result with timing details.
+    """
+    if subscription.status != "suspended":
+        return {
+            "action": "none",
+            "reason": "Not suspended",
+        }
+
+    now = datetime.now(timezone.utc)
+    days_suspended = (now - suspended_at).days
+
+    if days_suspended >= DATA_RETENTION_DAYS:
+        subscription.status = "cancelled"
+        return {
+            "subscription_id": subscription.id,
+            "action": "archived",
+            "days_suspended": days_suspended,
+            "retention_limit": DATA_RETENTION_DAYS,
+            "archived_at": now.isoformat(),
+        }
+
+    return {
+        "subscription_id": subscription.id,
+        "action": "retained",
+        "days_suspended": days_suspended,
+        "days_until_archival": DATA_RETENTION_DAYS - days_suspended,
     }

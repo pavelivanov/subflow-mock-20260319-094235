@@ -435,3 +435,55 @@ def check_card_expiry(
         "action": "none",
         "days_until_expiry": days_until_expiry,
     }
+
+
+def check_suspension_trigger(
+    subscription_id: str,
+    retry_attempts: int,
+    grace_period_expired: bool,
+) -> dict[str, object]:
+    """Check if a subscription should be suspended.
+
+    Suspension is triggered when payment retries are exhausted
+    (MAX_RETRIES reached) AND the grace period has expired.
+    Called after each retry exhaustion to determine next action.
+
+    Args:
+        subscription_id: The subscription to evaluate.
+        retry_attempts: Number of payment retries attempted.
+        grace_period_expired: Whether the grace period has ended.
+
+    Returns:
+        Suspension decision with reason.
+    """
+    retries_exhausted = retry_attempts >= MAX_RETRIES
+
+    if retries_exhausted and grace_period_expired:
+        return {
+            "subscription_id": subscription_id,
+            "action": "suspend",
+            "reason": (
+                f"Payment retries exhausted ({retry_attempts} "
+                f"of {MAX_RETRIES}) and grace period expired"
+            ),
+            "retry_attempts": retry_attempts,
+            "grace_period_expired": True,
+        }
+
+    if retries_exhausted:
+        return {
+            "subscription_id": subscription_id,
+            "action": "wait_for_grace",
+            "reason": (
+                "Retries exhausted but grace period still active"
+            ),
+            "retry_attempts": retry_attempts,
+            "grace_period_expired": False,
+        }
+
+    return {
+        "subscription_id": subscription_id,
+        "action": "continue_retries",
+        "retry_attempts": retry_attempts,
+        "retries_remaining": MAX_RETRIES - retry_attempts,
+    }

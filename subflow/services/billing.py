@@ -559,3 +559,66 @@ def calculate_downgrade_adjustment(
         ),
         "prorated_charge": 0.0,
     }
+
+
+def calculate_outstanding_balance(
+    unpaid_invoices: list[dict],
+) -> dict[str, object]:
+    """Calculate the total outstanding balance from unpaid invoices.
+
+    Sums up all unpaid invoice amounts to determine the balance
+    that must be cleared for subscription reactivation.
+
+    Args:
+        unpaid_invoices: List of invoice dicts with amount fields.
+
+    Returns:
+        Balance summary with total and invoice count.
+    """
+    total = sum(
+        inv.get("total_amount", 0.0) for inv in unpaid_invoices
+    )
+
+    return {
+        "total_outstanding": round(total, 2),
+        "unpaid_invoice_count": len(unpaid_invoices),
+        "can_reactivate": total == 0.0,
+    }
+
+
+def clear_balance_for_reactivation(
+    customer_id: str,
+    payment_amount: float,
+    outstanding_balance: float,
+) -> dict[str, object]:
+    """Process a payment to clear balance for reactivation.
+
+    The payment must cover the full outstanding balance.
+    Partial payments are not accepted for reactivation.
+
+    Args:
+        customer_id: The customer making the payment.
+        payment_amount: Amount being paid.
+        outstanding_balance: Current outstanding balance.
+
+    Returns:
+        Payment result with reactivation eligibility.
+
+    Raises:
+        ValueError: If payment does not cover the full balance.
+    """
+    if payment_amount < outstanding_balance:
+        raise ValueError(
+            f"Payment of ${payment_amount:.2f} does not cover "
+            f"outstanding balance of ${outstanding_balance:.2f}. "
+            "Full balance must be cleared for reactivation."
+        )
+
+    remaining = round(outstanding_balance - payment_amount, 2)
+    return {
+        "customer_id": customer_id,
+        "payment_amount": payment_amount,
+        "previous_balance": outstanding_balance,
+        "remaining_balance": max(0.0, remaining),
+        "eligible_for_reactivation": True,
+    }
