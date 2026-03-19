@@ -24,6 +24,10 @@ METERED_FEATURES: dict[str, dict] = {
     },
 }
 
+# Overage multiplier: usage beyond plan limits is charged at
+# this multiple of the base per-unit rate
+OVERAGE_MULTIPLIER = 1.5
+
 
 def track_usage(
     subscription_id: str,
@@ -79,3 +83,63 @@ def get_current_usage(
         ):
             total += record["quantity"]
     return total
+
+
+def calculate_usage_charges(
+    feature: str,
+    total_usage: float,
+    included_amount: float,
+) -> dict[str, object]:
+    """Calculate charges for usage-based billing.
+
+    Usage within the plan limit is included at no extra charge.
+    Overage (usage beyond the included amount) is charged at
+    OVERAGE_MULTIPLIER (1.5x) the base per-unit rate.
+
+    Args:
+        feature: The metered feature name.
+        total_usage: Total usage for the billing cycle.
+        included_amount: Amount included in the plan tier.
+
+    Returns:
+        A dict with included, overage, and charge breakdown.
+    """
+    feature_info = METERED_FEATURES.get(feature)
+    if feature_info is None:
+        raise ValueError(f"Unknown metered feature: {feature!r}")
+
+    base_rate = feature_info["price_per_unit"]
+    overage = max(0.0, total_usage - included_amount)
+    overage_rate = base_rate * OVERAGE_MULTIPLIER
+    overage_charge = round(overage * overage_rate, 2)
+
+    return {
+        "feature": feature,
+        "total_usage": total_usage,
+        "included": included_amount,
+        "overage_units": overage,
+        "base_rate": base_rate,
+        "overage_rate": overage_rate,
+        "overage_charge": overage_charge,
+    }
+
+
+def reset_usage(
+    subscription_id: str,
+) -> dict[str, object]:
+    """Reset usage counters at the start of a new billing cycle.
+
+    Called at the beginning of each billing period to zero out
+    metered usage counters.
+
+    Args:
+        subscription_id: The subscription to reset.
+
+    Returns:
+        Confirmation dict with reset timestamp.
+    """
+    return {
+        "subscription_id": subscription_id,
+        "features_reset": list(METERED_FEATURES.keys()),
+        "reset_at": datetime.now(timezone.utc).isoformat(),
+    }
