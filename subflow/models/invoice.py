@@ -67,6 +67,8 @@ class Invoice:
 
     tax_amount: float = 0.0
     tax_breakdown: list = field(default_factory=list)
+    pdf_url: str | None = None
+    pdf_generated_at: datetime | None = None
 
 
 @dataclass
