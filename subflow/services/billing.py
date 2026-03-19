@@ -368,3 +368,78 @@ def calculate_bulk_discount(
         "discount_percent": applicable_discount * 100,
         "tier": f"{applicable_tier}+ seats",
     }
+
+
+# Maximum combined discount (annual + bulk + any other)
+# expressed as a percentage of the base price
+MAX_COMBINED_DISCOUNT_PERCENT = 30
+
+# Annual billing discount: 2 months free out of 12
+ANNUAL_DISCOUNT_PERCENT = 16.7
+
+
+def calculate_annual_discount(
+    monthly_price: float,
+) -> dict[str, object]:
+    """Calculate the annual billing discount.
+
+    Annual billing gives 2 months free, which is a 16.7%%
+    discount on the full 12-month price.
+
+    Args:
+        monthly_price: The monthly plan price in USD.
+
+    Returns:
+        Discount details including annual price and savings.
+    """
+    full_annual = monthly_price * 12
+    discount_amount = round(
+        full_annual * (ANNUAL_DISCOUNT_PERCENT / 100), 2,
+    )
+    discounted_price = round(full_annual - discount_amount, 2)
+
+    return {
+        "monthly_price": monthly_price,
+        "full_annual_price": full_annual,
+        "discount_percent": ANNUAL_DISCOUNT_PERCENT,
+        "discount_amount": discount_amount,
+        "discounted_annual_price": discounted_price,
+    }
+
+
+def apply_combined_discount(
+    base_price: float,
+    discount_1_percent: float,
+    discount_2_percent: float = 0.0,
+) -> dict[str, object]:
+    """Apply combined discounts with a cap.
+
+    The total combined discount cannot exceed
+    MAX_COMBINED_DISCOUNT_PERCENT (30%%). If the sum of
+    discounts exceeds the cap, the total is clamped.
+
+    Args:
+        base_price: The original price before discounts.
+        discount_1_percent: First discount percentage.
+        discount_2_percent: Second discount percentage.
+
+    Returns:
+        Combined discount details and final price.
+    """
+    raw_total = discount_1_percent + discount_2_percent
+    capped_total = min(raw_total, MAX_COMBINED_DISCOUNT_PERCENT)
+    discount_amount = round(
+        base_price * (capped_total / 100), 2,
+    )
+    final_price = round(base_price - discount_amount, 2)
+
+    return {
+        "base_price": base_price,
+        "discount_1_percent": discount_1_percent,
+        "discount_2_percent": discount_2_percent,
+        "raw_combined_percent": raw_total,
+        "capped_combined_percent": capped_total,
+        "was_capped": raw_total > MAX_COMBINED_DISCOUNT_PERCENT,
+        "discount_amount": discount_amount,
+        "final_price": final_price,
+    }
