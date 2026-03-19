@@ -1,0 +1,1221 @@
+{
+  "repo_name": "subflow-mock-20260319-094235",
+  "repo_url": "https://github.com/pavelivanov/subflow-mock-20260319-094235",
+  "created_at": "2026-03-19T08:39:11.404014+00:00",
+  "total_changes": 33,
+  "changes": [
+    {
+      "order": 1,
+      "type": "direct_commit",
+      "sha": "c0623ad13d979b44f3689565cc1e91dc169a2363",
+      "pr_number": null,
+      "jira_key": null,
+      "title": "feat: add initial SubFlow package with models and config",
+      "files_changed": [
+        "subflow/__init__.py",
+        "subflow/config.py",
+        "subflow/models/__init__.py",
+        "subflow/models/customer.py",
+        "subflow/models/subscription.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Free plan: $0/mo, 3 seats, 1000 API calls, 1GB storage",
+          "file": "subflow/config.py",
+          "line_hint": "PLAN_TIERS"
+        },
+        {
+          "rule": "Pro plan: $49/mo, 25 seats, 50000 API calls, 100GB storage",
+          "file": "subflow/config.py",
+          "line_hint": "PLAN_TIERS"
+        },
+        {
+          "rule": "Enterprise plan: $199/mo, 500 seats, 500000 API calls, 1000GB storage",
+          "file": "subflow/config.py",
+          "line_hint": "PLAN_TIERS"
+        },
+        {
+          "rule": "Trial period is 30 days",
+          "file": "subflow/config.py",
+          "line_hint": "TRIAL_PERIOD_DAYS"
+        },
+        {
+          "rule": "Trial does not require a payment method upfront",
+          "file": "subflow/config.py",
+          "line_hint": "TRIAL_REQUIRES_PAYMENT_METHOD"
+        },
+        {
+          "rule": "Default billing cycle is monthly",
+          "file": "subflow/config.py",
+          "line_hint": "BILLING_CYCLE_DEFAULT"
+        },
+        {
+          "rule": "Invoices are due within 15 days",
+          "file": "subflow/config.py",
+          "line_hint": "INVOICE_DUE_DAYS"
+        },
+        {
+          "rule": "Annual pricing gives 2 months free (10x monthly)",
+          "file": "subflow/models/subscription.py",
+          "line_hint": "annual_price"
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "type": "direct_commit",
+      "sha": "1bd84024ba7aa1c4d1e5973681c4051cf93e10d9",
+      "pr_number": null,
+      "jira_key": null,
+      "title": "feat: add subscription service with state transitions",
+      "files_changed": [
+        "subflow/services/__init__.py",
+        "subflow/services/subscription.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Grace period after subscription expiry is 7 days",
+          "file": "subflow/services/subscription.py",
+          "line_hint": "GRACE_PERIOD_DAYS"
+        },
+        {
+          "rule": "Trial can transition to active or cancelled",
+          "file": "subflow/services/subscription.py",
+          "line_hint": "VALID_TRANSITIONS"
+        },
+        {
+          "rule": "Active can transition to paused, cancelled, or expired",
+          "file": "subflow/services/subscription.py",
+          "line_hint": "VALID_TRANSITIONS"
+        },
+        {
+          "rule": "Paused can transition to active or cancelled",
+          "file": "subflow/services/subscription.py",
+          "line_hint": "VALID_TRANSITIONS"
+        },
+        {
+          "rule": "Cancelled is a terminal state with no outbound transitions",
+          "file": "subflow/services/subscription.py",
+          "line_hint": "VALID_TRANSITIONS"
+        },
+        {
+          "rule": "Expired can only transition back to active (reactivation)",
+          "file": "subflow/services/subscription.py",
+          "line_hint": "VALID_TRANSITIONS"
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "type": "direct_commit",
+      "sha": "8f58d54300b382d2feb9d200250b1486cb04b4f9",
+      "pr_number": null,
+      "jira_key": null,
+      "title": "feat: add trial management service",
+      "files_changed": [
+        "subflow/services/trial.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Payment method must be on file by day 25 of the trial",
+          "file": "subflow/services/trial.py",
+          "line_hint": "PAYMENT_METHOD_REQUIRED_BY_DAY"
+        },
+        {
+          "rule": "Trial period is 30 days for all plans",
+          "file": "subflow/services/trial.py",
+          "line_hint": "TRIAL_PERIOD_DAYS"
+        },
+        {
+          "rule": "Trial status check returns active, convert, or needs_payment_method",
+          "file": "subflow/services/trial.py",
+          "line_hint": "check_trial_status"
+        },
+        {
+          "rule": "Converting trial to paid requires a valid payment method",
+          "file": "subflow/services/trial.py",
+          "line_hint": "convert_trial_to_paid"
+        }
+      ]
+    },
+    {
+      "order": 4,
+      "type": "direct_commit",
+      "sha": "b8193912dd075db2017afa46069205d79f7989f1",
+      "pr_number": null,
+      "jira_key": null,
+      "title": "feat: add billing service with invoice generation",
+      "files_changed": [
+        "subflow/models/invoice.py",
+        "subflow/services/billing.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Annual billing gives 2 months free (charges 10x monthly price)",
+          "file": "subflow/services/billing.py",
+          "line_hint": "monthly_price * 10"
+        },
+        {
+          "rule": "Invoice due date is INVOICE_DUE_DAYS (15) days from issue",
+          "file": "subflow/services/billing.py",
+          "line_hint": "INVOICE_DUE_DAYS"
+        },
+        {
+          "rule": "Monthly billing cycle advances by 30 days",
+          "file": "subflow/services/billing.py",
+          "line_hint": "timedelta(days=30)"
+        },
+        {
+          "rule": "Annual billing cycle advances by 365 days",
+          "file": "subflow/services/billing.py",
+          "line_hint": "timedelta(days=365)"
+        }
+      ]
+    },
+    {
+      "order": 5,
+      "type": "direct_commit",
+      "sha": "966c374d76e188204c783c53a99aa7551ea675d5",
+      "pr_number": null,
+      "jira_key": null,
+      "title": "feat: add payment processing with fee calculation",
+      "files_changed": [
+        "subflow/services/payment.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Supported payment methods are card, ach, and wire",
+          "file": "subflow/services/payment.py",
+          "line_hint": "SUPPORTED_PAYMENT_METHODS"
+        },
+        {
+          "rule": "Card processing fee is 2.9% + $0.30 per transaction",
+          "file": "subflow/services/payment.py",
+          "line_hint": "CARD_PROCESSING_FEE"
+        },
+        {
+          "rule": "ACH processing fee is flat $1.00 per transaction",
+          "file": "subflow/services/payment.py",
+          "line_hint": "ach"
+        },
+        {
+          "rule": "Wire transfers have no processing fee",
+          "file": "subflow/services/payment.py",
+          "line_hint": "wire"
+        },
+        {
+          "rule": "Cannot process payment on an already-paid invoice",
+          "file": "subflow/services/payment.py",
+          "line_hint": "already paid"
+        }
+      ]
+    },
+    {
+      "order": 6,
+      "type": "direct_commit",
+      "sha": "54bd930113b117b9a5216d13ab11d4a6459031e8",
+      "pr_number": null,
+      "jira_key": null,
+      "title": "feat: add notification service for email alerts",
+      "files_changed": [
+        "subflow/services/notification.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Trial ending warning is sent 3 days before expiry",
+          "file": "subflow/services/notification.py",
+          "line_hint": "TRIAL_WARNING_DAYS_BEFORE"
+        },
+        {
+          "rule": "Trial warning is only sent when days_remaining <= 3",
+          "file": "subflow/services/notification.py",
+          "line_hint": "days_remaining > TRIAL_WARNING_DAYS_BEFORE"
+        }
+      ]
+    },
+    {
+      "order": 7,
+      "type": "direct_commit",
+      "sha": "9649a6679a450da7761bdcc12a996559330c215c",
+      "pr_number": null,
+      "jira_key": null,
+      "title": "feat: add API routes and rate-limiting middleware",
+      "files_changed": [
+        "subflow/api/__init__.py",
+        "subflow/api/middleware.py",
+        "subflow/api/routes.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Free tier rate limit: 100 requests per hour",
+          "file": "subflow/api/middleware.py",
+          "line_hint": "RATE_LIMITS_PER_HOUR"
+        },
+        {
+          "rule": "Pro tier rate limit: 1000 requests per hour",
+          "file": "subflow/api/middleware.py",
+          "line_hint": "RATE_LIMITS_PER_HOUR"
+        },
+        {
+          "rule": "Enterprise tier rate limit: 10000 requests per hour",
+          "file": "subflow/api/middleware.py",
+          "line_hint": "RATE_LIMITS_PER_HOUR"
+        },
+        {
+          "rule": "Unknown plan tiers default to Free tier rate limit",
+          "file": "subflow/api/middleware.py",
+          "line_hint": "RATE_LIMITS_PER_HOUR[\"free\"]"
+        }
+      ]
+    },
+    {
+      "order": 8,
+      "type": "direct_commit",
+      "sha": "8e240e68765d042994cd3658990d5c6f15eaf3c8",
+      "pr_number": null,
+      "jira_key": null,
+      "title": "hotfix: reduce Free tier trial period to 7 days",
+      "files_changed": [
+        "subflow/config.py",
+        "subflow/services/trial.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Free tier trial period is 14 days",
+          "file": "subflow/config.py",
+          "line_hint": "TRIAL_PERIOD_DAYS"
+        },
+        {
+          "rule": "Pro tier trial period is 30 days",
+          "file": "subflow/config.py",
+          "line_hint": "TRIAL_PERIOD_DAYS"
+        },
+        {
+          "rule": "Enterprise tier trial period is 30 days",
+          "file": "subflow/config.py",
+          "line_hint": "TRIAL_PERIOD_DAYS"
+        },
+        {
+          "rule": "For short trials (< 25 days), payment method required by 80% of trial duration",
+          "file": "subflow/services/trial.py",
+          "line_hint": "payment_required_by"
+        }
+      ]
+    },
+    {
+      "order": 9,
+      "type": "direct_commit",
+      "sha": "03a1d1f6b57e6f6766a3f951fba1159fafe58e5a",
+      "pr_number": null,
+      "jira_key": null,
+      "title": "hotfix: add fraud detection checks to payment processing",
+      "files_changed": [
+        "subflow/services/payment.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Maximum single transaction amount is $10,000",
+          "file": "subflow/services/payment.py",
+          "line_hint": "MAX_SINGLE_TRANSACTION_AMOUNT"
+        },
+        {
+          "rule": "Maximum 3 failed payments allowed in 24 hours",
+          "file": "subflow/services/payment.py",
+          "line_hint": "MAX_FAILED_PAYMENTS_24H"
+        },
+        {
+          "rule": "New accounts (< 7 days) flagged for payments over $1000",
+          "file": "subflow/services/payment.py",
+          "line_hint": "customer_age_days < 7"
+        },
+        {
+          "rule": "Fraud risk score >= 50 blocks the payment",
+          "file": "subflow/services/payment.py",
+          "line_hint": "risk_score < 50"
+        },
+        {
+          "rule": "Fraud check runs before payment processing",
+          "file": "subflow/services/payment.py",
+          "line_hint": "check_fraud_risk"
+        }
+      ]
+    },
+    {
+      "order": 10,
+      "type": "direct_commit",
+      "sha": "cdfc9ed37027263ff011151c1fc916aeabfea260",
+      "pr_number": null,
+      "jira_key": null,
+      "title": "feat: add shared constants and status enums",
+      "files_changed": [
+        "subflow/constants.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Subscription statuses: trial, active, paused, cancelled, expired, suspended",
+          "file": "subflow/constants.py",
+          "line_hint": "SubscriptionStatus"
+        },
+        {
+          "rule": "Invoice statuses: draft, issued, paid, overdue, void, refunded",
+          "file": "subflow/constants.py",
+          "line_hint": "InvoiceStatus"
+        },
+        {
+          "rule": "Payment failure codes: insufficient_funds, card_declined, card_expired, fraud_detected, processing_error, invalid_account",
+          "file": "subflow/constants.py",
+          "line_hint": "PaymentFailureCode"
+        }
+      ]
+    },
+    {
+      "order": 11,
+      "type": "branch_merge",
+      "sha": "3f8d7acabd7b099c70b914b3284d2b5683fa8399",
+      "pr_number": null,
+      "jira_key": null,
+      "title": "Merge branch 'feature/proration-logic'",
+      "files_changed": [
+        "subflow/services/billing.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Upgrade charges prorated price difference immediately",
+          "file": "subflow/services/billing.py",
+          "line_hint": "calculate_proration"
+        },
+        {
+          "rule": "Downgrade issues credit applied to next invoice",
+          "file": "subflow/services/billing.py",
+          "line_hint": "calculate_downgrade_credit"
+        },
+        {
+          "rule": "Proration is calculated to the day based on remaining cycle time",
+          "file": "subflow/services/billing.py",
+          "line_hint": "daily_rate"
+        }
+      ]
+    },
+    {
+      "order": 12,
+      "type": "branch_merge",
+      "sha": "082bbca7f2086f001dd1f8e7d3f69c696bbc078c",
+      "pr_number": null,
+      "jira_key": null,
+      "title": "Merge branch 'feature/payment-retry'",
+      "files_changed": [
+        "subflow/services/payment.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Payment retries at 1h, 24h, 72h, and 168h after failure",
+          "file": "subflow/services/payment.py",
+          "line_hint": "RETRY_SCHEDULE_HOURS"
+        },
+        {
+          "rule": "Maximum 4 retry attempts before suspension",
+          "file": "subflow/services/payment.py",
+          "line_hint": "MAX_RETRIES"
+        },
+        {
+          "rule": "After 4 failed retries the subscription is suspended",
+          "file": "subflow/services/payment.py",
+          "line_hint": "suspend"
+        }
+      ]
+    },
+    {
+      "order": 13,
+      "type": "branch_merge",
+      "sha": "92d38cd586faf8b6af2e5a84a73482840492b0b7",
+      "pr_number": null,
+      "jira_key": null,
+      "title": "Merge branch 'feature/usage-billing'",
+      "files_changed": [
+        "subflow/services/usage.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Metered features: API calls ($0.50/1000), storage ($0.10/GB), team seats ($10/seat)",
+          "file": "subflow/services/usage.py",
+          "line_hint": "METERED_FEATURES"
+        },
+        {
+          "rule": "Overage usage charged at 1.5x the base per-unit rate",
+          "file": "subflow/services/usage.py",
+          "line_hint": "OVERAGE_MULTIPLIER"
+        },
+        {
+          "rule": "Usage counters reset at the start of each billing cycle",
+          "file": "subflow/services/usage.py",
+          "line_hint": "reset_usage"
+        }
+      ]
+    },
+    {
+      "order": 14,
+      "type": "branch_merge",
+      "sha": "f80a2288e97010e3c8db7a21f0b0b5ed0079e2f2",
+      "pr_number": null,
+      "jira_key": null,
+      "title": "Merge branch 'feature/referral-program'",
+      "files_changed": [
+        "subflow/services/referral.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Referrer gets 20% credit on referred subscription price",
+          "file": "subflow/services/referral.py",
+          "line_hint": "REFERRAL_CREDIT_PERCENT"
+        },
+        {
+          "rule": "Maximum referral credit is $50 per referral",
+          "file": "subflow/services/referral.py",
+          "line_hint": "MAX_REFERRAL_CREDIT"
+        },
+        {
+          "rule": "Maximum annual referral credit is $500",
+          "file": "subflow/services/referral.py",
+          "line_hint": "MAX_ANNUAL_REFERRAL_CREDIT"
+        },
+        {
+          "rule": "Referral links expire after 90 days",
+          "file": "subflow/services/referral.py",
+          "line_hint": "REFERRAL_VALIDITY_DAYS"
+        },
+        {
+          "rule": "Referred customer gets 1 month free",
+          "file": "subflow/services/referral.py",
+          "line_hint": "REFEREE_FREE_MONTHS"
+        }
+      ]
+    },
+    {
+      "order": 15,
+      "type": "branch_merge",
+      "sha": "223cf78674503466754b5b1d050482f768b30dd2",
+      "pr_number": null,
+      "jira_key": null,
+      "title": "Merge branch 'feature/credit-notes'",
+      "files_changed": [
+        "subflow/models/invoice.py",
+        "subflow/services/billing.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Partial refunds are issued as credit notes, not cash refunds",
+          "file": "subflow/services/billing.py",
+          "line_hint": "issue_credit_note"
+        },
+        {
+          "rule": "Credits auto-apply to the next invoice",
+          "file": "subflow/services/billing.py",
+          "line_hint": "apply_credits_to_invoice"
+        },
+        {
+          "rule": "Maximum refund is 100% of the invoice total",
+          "file": "subflow/services/billing.py",
+          "line_hint": "MAX_REFUND_PERCENT"
+        },
+        {
+          "rule": "Credit notes rejected for invoices older than 365 days",
+          "file": "subflow/services/billing.py",
+          "line_hint": "MAX_REFUND_AGE_DAYS"
+        }
+      ]
+    },
+    {
+      "order": 16,
+      "type": "branch_merge",
+      "sha": "9d4b821a565cece6e034e3290c06025244b82adf",
+      "pr_number": null,
+      "jira_key": null,
+      "title": "Merge branch 'feature/pause-resume'",
+      "files_changed": [
+        "subflow/services/subscription.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Maximum pause duration is 90 days",
+          "file": "subflow/services/subscription.py",
+          "line_hint": "MAX_PAUSE_DURATION_DAYS"
+        },
+        {
+          "rule": "Subscriptions auto-cancel after 90 days paused",
+          "file": "subflow/services/subscription.py",
+          "line_hint": "auto_cancelled"
+        },
+        {
+          "rule": "Cannot pause during trial period",
+          "file": "subflow/services/subscription.py",
+          "line_hint": "trial"
+        }
+      ]
+    },
+    {
+      "order": 17,
+      "type": "branch_merge",
+      "sha": "58ac0e6c33752ea575cbf6535242dcaeac7a5820",
+      "pr_number": null,
+      "jira_key": null,
+      "title": "Merge branch 'feature/multi-currency'",
+      "files_changed": [
+        "subflow/config.py",
+        "subflow/services/billing.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Supported currencies: USD, EUR, GBP, CAD, AUD",
+          "file": "subflow/config.py",
+          "line_hint": "SUPPORTED_CURRENCIES"
+        },
+        {
+          "rule": "Currency conversion uses daily rate plus 1% spread",
+          "file": "subflow/services/billing.py",
+          "line_hint": "CURRENCY_SPREAD_PERCENT"
+        },
+        {
+          "rule": "Invoice currency is locked at creation time",
+          "file": "subflow/services/billing.py",
+          "line_hint": "lock_invoice_currency"
+        }
+      ]
+    },
+    {
+      "order": 18,
+      "type": "branch_merge",
+      "sha": "9faa35a4bd0eea14d41915d964b2db06969a4c63",
+      "pr_number": null,
+      "jira_key": null,
+      "title": "Merge branch 'feature/bulk-discounts'",
+      "files_changed": [
+        "subflow/config.py",
+        "subflow/services/billing.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "10+ seats: 10% bulk discount",
+          "file": "subflow/config.py",
+          "line_hint": "BULK_DISCOUNT_TIERS"
+        },
+        {
+          "rule": "50+ seats: 15% bulk discount",
+          "file": "subflow/config.py",
+          "line_hint": "BULK_DISCOUNT_TIERS"
+        },
+        {
+          "rule": "100+ seats: 20% bulk discount",
+          "file": "subflow/config.py",
+          "line_hint": "BULK_DISCOUNT_TIERS"
+        },
+        {
+          "rule": "Above 250 seats requires custom pricing (no automatic discount)",
+          "file": "subflow/config.py",
+          "line_hint": "CUSTOM_PRICING_THRESHOLD"
+        }
+      ]
+    },
+    {
+      "order": 19,
+      "type": "pull_request",
+      "sha": "9a39028688be7bfc804eee921732253b710ba9e6",
+      "pr_number": 1,
+      "jira_key": "SUB-101",
+      "title": "SUB-101: Add annual billing discount support",
+      "files_changed": [
+        "subflow/services/billing.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Annual billing discount is 16.7% (2 months free out of 12)",
+          "file": "subflow/services/billing.py",
+          "line_hint": "ANNUAL_DISCOUNT_PERCENT"
+        },
+        {
+          "rule": "Combined discounts (annual + bulk + other) are capped at 30%",
+          "file": "subflow/services/billing.py",
+          "line_hint": "MAX_COMBINED_DISCOUNT_PERCENT"
+        }
+      ]
+    },
+    {
+      "order": 20,
+      "type": "pull_request",
+      "sha": "ef10427e16af25a5ad28b64bb8e27b9fca0c8967",
+      "pr_number": 2,
+      "jira_key": "SUB-102",
+      "title": "SUB-102: Implement seat-based licensing",
+      "files_changed": [
+        "subflow/models/subscription.py",
+        "subflow/services/seat_management.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Minimum 1 seat per subscription",
+          "file": "subflow/services/seat_management.py",
+          "line_hint": "MIN_SEATS"
+        },
+        {
+          "rule": "Maximum 10,000 seats per subscription",
+          "file": "subflow/services/seat_management.py",
+          "line_hint": "MAX_SEATS"
+        },
+        {
+          "rule": "Seat removal blocked if users are still assigned",
+          "file": "subflow/services/seat_management.py",
+          "line_hint": "assigned_users"
+        },
+        {
+          "rule": "Removed seats billed through end of current billing cycle",
+          "file": "subflow/services/seat_management.py",
+          "line_hint": "billed_through_cycle_end"
+        }
+      ]
+    },
+    {
+      "order": 21,
+      "type": "pull_request",
+      "sha": "dab4d8e22d3ae13833e51bb0e18b91d23b281975",
+      "pr_number": 3,
+      "jira_key": "SUB-103",
+      "title": "SUB-103: Add dunning email sequence for failed payments",
+      "files_changed": [
+        "subflow/services/notification.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Dunning emails sent at days 1, 3, 7, and 14 after payment failure",
+          "file": "subflow/services/notification.py",
+          "line_hint": "DUNNING_SCHEDULE_DAYS"
+        },
+        {
+          "rule": "Escalation to account manager at day 7",
+          "file": "subflow/services/notification.py",
+          "line_hint": "ESCALATION_DAY"
+        },
+        {
+          "rule": "Auto-cancel subscription after 21 days of non-payment",
+          "file": "subflow/services/notification.py",
+          "line_hint": "AUTO_CANCEL_DAYS"
+        },
+        {
+          "rule": "Each dunning email includes direct link to update payment method",
+          "file": "subflow/services/notification.py",
+          "line_hint": "update_payment_link"
+        }
+      ]
+    },
+    {
+      "order": 22,
+      "type": "pull_request",
+      "sha": "e42c46b190f29a64e9e17fa6a5fb57a79d624454",
+      "pr_number": 4,
+      "jira_key": "SUB-104",
+      "title": "SUB-104: Implement GDPR-compliant data deletion",
+      "files_changed": [
+        "subflow/services/gdpr.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "30-day soft delete period before permanent data removal",
+          "file": "subflow/services/gdpr.py",
+          "line_hint": "SOFT_DELETE_DAYS"
+        },
+        {
+          "rule": "Hard purge cannot execute before soft delete period elapses",
+          "file": "subflow/services/gdpr.py",
+          "line_hint": "days_since_delete < SOFT_DELETE_DAYS"
+        },
+        {
+          "rule": "Billing records are anonymized, not deleted, for financial compliance",
+          "file": "subflow/services/gdpr.py",
+          "line_hint": "anonymize_billing_records"
+        },
+        {
+          "rule": "Data export must be fulfilled within 72 hours",
+          "file": "subflow/services/gdpr.py",
+          "line_hint": "EXPORT_DEADLINE_HOURS"
+        }
+      ]
+    },
+    {
+      "order": 23,
+      "type": "pull_request",
+      "sha": "3484307b44fe6aaa2f80bbed7ba032b4a742f68f",
+      "pr_number": 5,
+      "jira_key": "SUB-105",
+      "title": "SUB-105: Add tax calculation with US nexus and EU VAT",
+      "files_changed": [
+        "subflow/models/invoice.py",
+        "subflow/services/billing.py",
+        "subflow/services/tax.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "US sales tax collected only in nexus states: CA, NY, TX, WA, IL",
+          "file": "subflow/services/tax.py",
+          "line_hint": "US_NEXUS_STATES"
+        },
+        {
+          "rule": "EU B2B transactions use reverse charge (0% VAT)",
+          "file": "subflow/services/tax.py",
+          "line_hint": "eu_reverse_charge"
+        },
+        {
+          "rule": "EU B2C transactions charged destination country VAT rate",
+          "file": "subflow/services/tax.py",
+          "line_hint": "eu_vat"
+        },
+        {
+          "rule": "Tax-exempt customers with valid certificate skip tax",
+          "file": "subflow/services/tax.py",
+          "line_hint": "check_tax_exemption"
+        },
+        {
+          "rule": "Tax breakdown included on each invoice",
+          "file": "subflow/models/invoice.py",
+          "line_hint": "tax_breakdown"
+        }
+      ]
+    },
+    {
+      "order": 24,
+      "type": "pull_request",
+      "sha": "055cb06090670b6cf94c1e2a2598b8db6ffcf61c",
+      "pr_number": 6,
+      "jira_key": "SUB-106",
+      "title": "SUB-106: Rework upgrade/downgrade with proration timing",
+      "files_changed": [
+        "subflow/services/billing.py",
+        "subflow/services/subscription.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Upgrades take effect immediately with prorated billing",
+          "file": "subflow/services/subscription.py",
+          "line_hint": "effective.*immediate"
+        },
+        {
+          "rule": "Downgrades deferred to end of current billing cycle",
+          "file": "subflow/services/subscription.py",
+          "line_hint": "end_of_cycle"
+        },
+        {
+          "rule": "Maximum 3 tier downgrades per rolling 12-month period",
+          "file": "subflow/services/subscription.py",
+          "line_hint": "MAX_DOWNGRADES_PER_YEAR"
+        },
+        {
+          "rule": "Downgrade means tier change only, not seat reductions",
+          "file": "subflow/services/subscription.py",
+          "line_hint": "downgrade_subscription"
+        }
+      ]
+    },
+    {
+      "order": 25,
+      "type": "pull_request",
+      "sha": "eb1f9589d8872c34fde42fd3b8857b84e6f0c1bb",
+      "pr_number": 7,
+      "jira_key": "SUB-107",
+      "title": "SUB-107: Add webhook event delivery system",
+      "files_changed": [
+        "subflow/api/routes.py",
+        "subflow/services/webhook.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Webhook events: subscription.created/updated/cancelled, invoice.paid/failed, payment.refunded",
+          "file": "subflow/services/webhook.py",
+          "line_hint": "WEBHOOK_EVENTS"
+        },
+        {
+          "rule": "Maximum 5 webhook delivery retry attempts",
+          "file": "subflow/services/webhook.py",
+          "line_hint": "MAX_WEBHOOK_RETRIES"
+        },
+        {
+          "rule": "Webhook delivery timeout is 30 seconds",
+          "file": "subflow/services/webhook.py",
+          "line_hint": "WEBHOOK_TIMEOUT_SECONDS"
+        },
+        {
+          "rule": "Webhook retry uses exponential backoff: 1s, 2s, 4s, 8s, 16s",
+          "file": "subflow/services/webhook.py",
+          "line_hint": "WEBHOOK_BACKOFF_BASE_SECONDS"
+        }
+      ]
+    },
+    {
+      "order": 26,
+      "type": "pull_request",
+      "sha": "80d00a229f28a9ce952259fac5d5f295b3295822",
+      "pr_number": 8,
+      "jira_key": "SUB-108",
+      "title": "SUB-108: Prevent trial abuse with domain limits and disposable email blocking",
+      "files_changed": [
+        "subflow/config.py",
+        "subflow/services/trial.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Maximum 1 trial per email domain per 90-day window",
+          "file": "subflow/config.py",
+          "line_hint": "MAX_TRIALS_PER_DOMAIN"
+        },
+        {
+          "rule": "Disposable email domains are blocked from starting trials",
+          "file": "subflow/config.py",
+          "line_hint": "DISPOSABLE_EMAIL_DOMAINS"
+        },
+        {
+          "rule": "Free tier trial requires a payment card on file",
+          "file": "subflow/config.py",
+          "line_hint": "FREE_TRIAL_REQUIRES_CARD"
+        },
+        {
+          "rule": "Trial abuse rules apply to new trials only, existing trials unaffected",
+          "file": "subflow/services/trial.py",
+          "line_hint": "check_trial_eligibility"
+        }
+      ]
+    },
+    {
+      "order": 27,
+      "type": "pull_request",
+      "sha": "3b9aa7c5ab8286a63f02021a7e2118fc3c82e31e",
+      "pr_number": 9,
+      "jira_key": "SUB-109",
+      "title": "SUB-109: Add enterprise contract terms and override pricing",
+      "files_changed": [
+        "subflow/services/enterprise.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Enterprise contracts require 12-month minimum commitment",
+          "file": "subflow/services/enterprise.py",
+          "line_hint": "MINIMUM_COMMITMENT_MONTHS"
+        },
+        {
+          "rule": "Enterprise cancellation requires 60-day advance notice",
+          "file": "subflow/services/enterprise.py",
+          "line_hint": "CANCELLATION_NOTICE_DAYS"
+        },
+        {
+          "rule": "Enterprise payment terms: NET-30, NET-60, or NET-90",
+          "file": "subflow/services/enterprise.py",
+          "line_hint": "PAYMENT_TERMS_OPTIONS"
+        },
+        {
+          "rule": "Contract override pricing floor is checked by sales tooling, not this code",
+          "file": "subflow/services/enterprise.py",
+          "line_hint": "apply_contract_override"
+        }
+      ]
+    },
+    {
+      "order": 28,
+      "type": "pull_request",
+      "sha": "ea589daa9c3f456434352ca22b6550306a8ff0a5",
+      "pr_number": 10,
+      "jira_key": "SUB-110",
+      "title": "SUB-110: Add payment method management with expiry handling",
+      "files_changed": [
+        "subflow/services/payment.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Maximum 5 payment methods per customer",
+          "file": "subflow/services/payment.py",
+          "line_hint": "MAX_PAYMENT_METHODS"
+        },
+        {
+          "rule": "One payment method must always be set as default",
+          "file": "subflow/services/payment.py",
+          "line_hint": "add_payment_method"
+        },
+        {
+          "rule": "Expired card warning sent 30 days before expiry",
+          "file": "subflow/services/payment.py",
+          "line_hint": "CARD_EXPIRY_WARNING_DAYS"
+        },
+        {
+          "rule": "Charges blocked 7 days after card expiry",
+          "file": "subflow/services/payment.py",
+          "line_hint": "CARD_EXPIRY_BLOCK_DAYS"
+        },
+        {
+          "rule": "If only payment method expires, invoice fails and enters dunning flow",
+          "file": "subflow/services/payment.py",
+          "line_hint": "check_card_expiry"
+        }
+      ]
+    },
+    {
+      "order": 29,
+      "type": "pull_request",
+      "sha": "673a965284c85245394e75db5e52d1982b37d8cf",
+      "pr_number": 11,
+      "jira_key": "SUB-111",
+      "title": "SUB-111: Add async invoice PDF generation",
+      "files_changed": [
+        "subflow/models/invoice.py",
+        "subflow/services/invoice_pdf.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Invoice PDF generation must complete within 5 minutes",
+          "file": "subflow/services/invoice_pdf.py",
+          "line_hint": "PDF_GENERATION_TIMEOUT_MINUTES"
+        },
+        {
+          "rule": "Invoice PDFs use locale-aware number and date formatting",
+          "file": "subflow/services/invoice_pdf.py",
+          "line_hint": "generate_invoice_pdf"
+        },
+        {
+          "rule": "Invoice PDFs include per-line-item tax breakdown",
+          "file": "subflow/services/invoice_pdf.py",
+          "line_hint": "tax_breakdown"
+        },
+        {
+          "rule": "Invoice PDF is regenerated when a credit note is issued",
+          "file": "subflow/services/invoice_pdf.py",
+          "line_hint": "regenerate_pdf_on_credit_note"
+        },
+        {
+          "rule": "Invoice PDFs stored in S3 with 7-year retention for compliance",
+          "file": "subflow/services/invoice_pdf.py",
+          "line_hint": "PDF_RETENTION_YEARS"
+        }
+      ]
+    },
+    {
+      "order": 30,
+      "type": "pull_request",
+      "sha": "74447e4244780fcfd6023bb706ee1240ff4f076a",
+      "pr_number": 12,
+      "jira_key": "SUB-112",
+      "title": "SUB-112: Add subscription analytics with MRR, churn, and LTV tracking",
+      "files_changed": [
+        "subflow/services/analytics.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Analytics tracks MRR, churn rate, and LTV per customer",
+          "file": "subflow/services/analytics.py",
+          "line_hint": "calculate_mrr"
+        },
+        {
+          "rule": "Analytics events emitted on subscription state change",
+          "file": "subflow/services/analytics.py",
+          "line_hint": "emit_analytics_event"
+        }
+      ]
+    },
+    {
+      "order": 31,
+      "type": "pull_request",
+      "sha": "c67857fcc13b2ad2dbfc021b37eef243f18e4ddd",
+      "pr_number": 13,
+      "jira_key": "SUB-113",
+      "title": "SUB-113: Rework grace periods with tiered durations by plan",
+      "files_changed": [
+        "subflow/services/subscription.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Grace period is tiered by plan: free=3 days, pro=7 days, enterprise=14 days",
+          "file": "subflow/services/subscription.py",
+          "line_hint": "GRACE_PERIOD_DAYS"
+        },
+        {
+          "rule": "Read-only access during grace period",
+          "file": "subflow/services/subscription.py",
+          "line_hint": "is_read_only_access"
+        },
+        {
+          "rule": "is_in_grace_period flag exposed for frontend banner",
+          "file": "subflow/services/subscription.py",
+          "line_hint": "in_grace_period"
+        }
+      ]
+    },
+    {
+      "order": 32,
+      "type": "pull_request",
+      "sha": "efd291cb02506fb0694f03c4cd09666572d15dd3",
+      "pr_number": 14,
+      "jira_key": "SUB-114",
+      "title": "SUB-114: Add coupon and promotion system",
+      "files_changed": [
+        "subflow/services/coupon.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Supported coupon types: percentage, fixed_amount, free_months",
+          "file": "subflow/services/coupon.py",
+          "line_hint": "COUPON_TYPES"
+        },
+        {
+          "rule": "Maximum 1 coupon per subscription",
+          "file": "subflow/services/coupon.py",
+          "line_hint": "MAX_COUPONS_PER_SUBSCRIPTION"
+        },
+        {
+          "rule": "Coupons expire after 30 days",
+          "file": "subflow/services/coupon.py",
+          "line_hint": "COUPON_EXPIRY_DAYS"
+        },
+        {
+          "rule": "Coupon validation retries up to 5 times before rejecting",
+          "file": "subflow/services/coupon.py",
+          "line_hint": "MAX_COUPON_VALIDATION_RETRIES"
+        }
+      ]
+    },
+    {
+      "order": 33,
+      "type": "pull_request",
+      "sha": "a3a4e74244ffd5299a922bf2d04a76f24efbd714",
+      "pr_number": 15,
+      "jira_key": "SUB-115",
+      "title": "SUB-115: Add account suspension and reactivation workflow",
+      "files_changed": [
+        "subflow/services/billing.py",
+        "subflow/services/notification.py",
+        "subflow/services/payment.py",
+        "subflow/services/subscription.py"
+      ],
+      "business_rules": [
+        {
+          "rule": "Suspension triggered after payment retries exhausted AND grace period expired",
+          "file": "subflow/services/payment.py",
+          "line_hint": "check_suspension_trigger"
+        },
+        {
+          "rule": "Suspended accounts retain data for 90 days before archival",
+          "file": "subflow/services/subscription.py",
+          "line_hint": "DATA_RETENTION_DAYS"
+        },
+        {
+          "rule": "Reactivation requires outstanding balance cleared to $0",
+          "file": "subflow/services/subscription.py",
+          "line_hint": "reactivate_subscription"
+        },
+        {
+          "rule": "Suspended is recoverable within 90 days; cancelled is voluntary and immediate",
+          "file": "subflow/services/subscription.py",
+          "line_hint": "suspend_subscription"
+        },
+        {
+          "rule": "Archival warning sent at day 60 (30 days before archival)",
+          "file": "subflow/services/notification.py",
+          "line_hint": "send_archival_warning"
+        },
+        {
+          "rule": "Notifications sent at suspension, 30-day archival warning, and archival",
+          "file": "subflow/services/notification.py",
+          "line_hint": "send_suspension_notice"
+        },
+        {
+          "rule": "Full balance payment required for reactivation — no partial payments",
+          "file": "subflow/services/billing.py",
+          "line_hint": "clear_balance_for_reactivation"
+        }
+      ]
+    }
+  ],
+  "intentional_discrepancies": [
+    {
+      "type": "commit_message_vs_code",
+      "description_says": "reduce Free tier trial period to 7 days",
+      "code_says": "Free tier trial period is set to 14 days, not 7",
+      "file": "subflow/config.py",
+      "change_order": 8
+    },
+    {
+      "type": "commit_message_vs_code",
+      "description_says": "up to $100 per referral",
+      "code_says": "MAX_REFERRAL_CREDIT = 50.00",
+      "file": "subflow/services/referral.py",
+      "change_order": 14
+    },
+    {
+      "type": "pr_body_vs_code",
+      "description_says": "Auto-cancel after 14 days",
+      "code_says": "AUTO_CANCEL_DAYS = 21",
+      "file": "subflow/services/notification.py",
+      "change_order": 21
+    },
+    {
+      "type": "pr_description_vs_code",
+      "description_says": "retry 3 times",
+      "code_says": "MAX_COUPON_VALIDATION_RETRIES = 5",
+      "file": "subflow/services/coupon.py",
+      "change_order": 32
+    }
+  ],
+  "cross_change_modifications": [
+    {
+      "rule": "Trial period duration",
+      "evolution": [
+        {
+          "order": 3,
+          "state": "30 days for all plans"
+        },
+        {
+          "order": 8,
+          "state": "14 days for Free, 30 for Pro/Enterprise"
+        },
+        {
+          "order": 26,
+          "state": "Abuse prevention: max 1 trial per domain per 90 days"
+        }
+      ],
+      "current_state": "14d Free / 30d Pro+Ent, per-domain abuse prevention"
+    },
+    {
+      "rule": "Proration logic",
+      "evolution": [
+        {
+          "order": 11,
+          "state": "Upgrade charges diff immediately, downgrade credits next invoice"
+        },
+        {
+          "order": 24,
+          "state": "Immediate upgrade, EOC downgrade, 3 downgrades/year limit"
+        }
+      ],
+      "current_state": "Immediate upgrade proration, EOC downgrade, max 3/year"
+    },
+    {
+      "rule": "Grace period after subscription expiry",
+      "evolution": [
+        {
+          "order": 2,
+          "state": "7 days flat for all plans"
+        },
+        {
+          "order": 31,
+          "state": "Tiered: Free=3d, Pro=7d, Enterprise=14d, read-only access"
+        }
+      ],
+      "current_state": "Tiered grace: Free 3d, Pro 7d, Enterprise 14d with read-only"
+    }
+  ],
+  "review_comment_only_rules": [
+    {
+      "rule": "Maximum combined discount cap is 30%",
+      "comment_author": "reviewer",
+      "change_order": 19,
+      "pr_jira_key": "SUB-101"
+    },
+    {
+      "rule": "Internal test accounts (subflow.dev, subflow-test.com) excluded from all metrics",
+      "comment_author": "reviewer",
+      "change_order": 30,
+      "pr_jira_key": "SUB-112"
+    }
+  ]
+}
