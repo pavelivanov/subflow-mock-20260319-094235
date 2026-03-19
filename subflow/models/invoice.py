@@ -65,6 +65,9 @@ class Invoice:
             return False
         return datetime.now(timezone.utc) > self.due_at
 
+    tax_amount: float = 0.0
+    tax_breakdown: list = field(default_factory=list)
+
 
 @dataclass
 class CreditNote:
