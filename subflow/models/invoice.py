@@ -64,3 +64,33 @@ class Invoice:
         if self.status == "paid" or self.due_at is None:
             return False
         return datetime.now(timezone.utc) > self.due_at
+
+
+@dataclass
+class CreditNote:
+    """Represents a credit note against an invoice.
+
+    Credit notes record partial refunds that are applied as
+    credits to future invoices rather than cash refunds.
+
+    Attributes:
+        id: Unique credit note identifier.
+        invoice_id: The original invoice this credit is against.
+        customer_id: The customer receiving the credit.
+        amount: Credit amount in USD.
+        reason: Why the credit was issued.
+        created_at: When the credit note was created.
+        applied: Whether the credit has been used.
+        applied_to_invoice_id: Invoice the credit was applied to.
+    """
+
+    id: str
+    invoice_id: str
+    customer_id: str
+    amount: float
+    reason: str = ""
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc),
+    )
+    applied: bool = False
+    applied_to_invoice_id: str | None = None
