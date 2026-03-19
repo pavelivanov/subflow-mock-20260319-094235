@@ -221,3 +221,115 @@ def check_pause_expiry(
         "days_paused": days_paused,
         "days_remaining": MAX_PAUSE_DURATION_DAYS - days_paused,
     }
+
+
+# Maximum tier downgrades allowed per rolling 12-month period
+MAX_DOWNGRADES_PER_YEAR = 3
+
+
+def upgrade_subscription(
+    subscription: Subscription,
+    new_plan: Plan,
+) -> dict[str, object]:
+    """Upgrade a subscription to a higher-tier plan.
+
+    Upgrades take effect immediately. A prorated charge is
+    calculated for the remaining days in the current billing
+    cycle.
+
+    Args:
+        subscription: The subscription to upgrade.
+        new_plan: The new, higher-tier plan.
+
+    Returns:
+        Upgrade details including proration.
+
+    Raises:
+        ValueError: If the new plan is not a higher tier.
+    """
+    if new_plan.monthly_price <= subscription.plan.monthly_price:
+        raise ValueError(
+            f"New plan ${new_plan.monthly_price}/mo is not an "
+            f"upgrade from ${subscription.plan.monthly_price}/mo"
+        )
+
+    now = datetime.now(timezone.utc)
+    old_plan = subscription.plan
+    subscription.plan = new_plan
+
+    # Calculate proration for remaining days
+    days_remaining = 0
+    days_in_cycle = 30
+    if subscription.current_period_end:
+        days_remaining = max(
+            0, (subscription.current_period_end - now).days,
+        )
+
+    proration = 0.0
+    if days_remaining > 0:
+        price_diff = new_plan.monthly_price - old_plan.monthly_price
+        daily_rate = price_diff / days_in_cycle
+        proration = round(daily_rate * days_remaining, 2)
+
+    return {
+        "subscription_id": subscription.id,
+        "previous_plan": old_plan.name,
+        "new_plan": new_plan.name,
+        "effective": "immediate",
+        "prorated_charge": proration,
+        "upgraded_at": now.isoformat(),
+    }
+
+
+def downgrade_subscription(
+    subscription: Subscription,
+    new_plan: Plan,
+    downgrades_this_year: int = 0,
+) -> dict[str, object]:
+    """Downgrade a subscription to a lower-tier plan.
+
+    Downgrades take effect at the end of the current billing
+    cycle, not immediately. Maximum MAX_DOWNGRADES_PER_YEAR (3)
+    tier downgrades are allowed per rolling 12-month period.
+    Downgrade means tier change only — seat reductions are
+    not counted.
+
+    Args:
+        subscription: The subscription to downgrade.
+        new_plan: The new, lower-tier plan.
+        downgrades_this_year: Number of downgrades already used.
+
+    Returns:
+        Downgrade details including effective date.
+
+    Raises:
+        ValueError: If the new plan is not cheaper, or the
+            annual downgrade limit has been reached.
+    """
+    if new_plan.monthly_price >= subscription.plan.monthly_price:
+        raise ValueError(
+            f"New plan ${new_plan.monthly_price}/mo is not a "
+            f"downgrade from ${subscription.plan.monthly_price}/mo"
+        )
+
+    if downgrades_this_year >= MAX_DOWNGRADES_PER_YEAR:
+        raise ValueError(
+            f"Downgrade limit reached: {downgrades_this_year} "
+            f"of {MAX_DOWNGRADES_PER_YEAR} allowed per year"
+        )
+
+    effective_at = subscription.current_period_end
+
+    return {
+        "subscription_id": subscription.id,
+        "previous_plan": subscription.plan.name,
+        "new_plan": new_plan.name,
+        "effective": "end_of_cycle",
+        "effective_at": (
+            effective_at.isoformat() if effective_at else None
+        ),
+        "downgrades_used": downgrades_this_year + 1,
+        "downgrades_remaining": (
+            MAX_DOWNGRADES_PER_YEAR - downgrades_this_year - 1
+        ),
+    }

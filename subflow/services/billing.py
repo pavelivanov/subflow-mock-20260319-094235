@@ -492,3 +492,70 @@ def generate_invoice_with_tax(
             invoice.total_amount + tax_result["tax_amount"], 2,
         ),
     }
+
+
+def calculate_upgrade_proration(
+    old_price: float,
+    new_price: float,
+    days_remaining: int,
+    days_in_cycle: int = 30,
+) -> dict[str, object]:
+    """Calculate prorated charge for an immediate upgrade.
+
+    Upgrades are charged immediately. The prorated amount covers
+    the price difference for the remaining days in the cycle.
+
+    Args:
+        old_price: Current monthly plan price.
+        new_price: New (higher) monthly plan price.
+        days_remaining: Days left in the current billing cycle.
+        days_in_cycle: Total days in the billing cycle.
+
+    Returns:
+        Proration details for the upgrade.
+    """
+    price_diff = new_price - old_price
+    daily_rate = price_diff / days_in_cycle
+    prorated_amount = round(daily_rate * days_remaining, 2)
+
+    return {
+        "type": "upgrade",
+        "timing": "immediate",
+        "old_price": old_price,
+        "new_price": new_price,
+        "days_remaining": days_remaining,
+        "prorated_charge": prorated_amount,
+    }
+
+
+def calculate_downgrade_adjustment(
+    old_price: float,
+    new_price: float,
+    current_period_end: datetime | None = None,
+) -> dict[str, object]:
+    """Calculate billing adjustment for an end-of-cycle downgrade.
+
+    Downgrades do not take effect until the end of the current
+    billing cycle. No proration is needed — the customer pays
+    the current rate through the cycle end, then switches.
+
+    Args:
+        old_price: Current monthly plan price.
+        new_price: New (lower) monthly plan price.
+        current_period_end: When the current billing period ends.
+
+    Returns:
+        Downgrade billing details.
+    """
+    return {
+        "type": "downgrade",
+        "timing": "end_of_cycle",
+        "old_price": old_price,
+        "new_price": new_price,
+        "savings_per_month": round(old_price - new_price, 2),
+        "effective_at": (
+            current_period_end.isoformat()
+            if current_period_end else None
+        ),
+        "prorated_charge": 0.0,
+    }
