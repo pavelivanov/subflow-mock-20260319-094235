@@ -225,3 +225,49 @@ def schedule_retry(
         "attempt": attempt_number,
         "retry_after_hours": hours,
     }
+
+
+def process_retry(
+    invoice: Invoice,
+    method_type: str,
+    attempt_number: int,
+    failed_payments_24h: int = 0,
+    customer_age_days: int = 365,
+) -> dict[str, object]:
+    """Attempt a payment retry for a failed invoice.
+
+    If the retry fails and max retries are exceeded, triggers
+    subscription suspension. After 4 failed attempts the
+    subscription is suspended.
+
+    Args:
+        invoice: The invoice to retry payment for.
+        method_type: The payment method type.
+        attempt_number: Current retry attempt (1-based).
+        failed_payments_24h: Recent failed payment count.
+        customer_age_days: Customer account age in days.
+
+    Returns:
+        A dict with the retry result or suspension trigger.
+    """
+    try:
+        result = process_payment(
+            invoice, method_type,
+            failed_payments_24h=failed_payments_24h,
+            customer_age_days=customer_age_days,
+        )
+        result["retry_attempt"] = attempt_number
+        result["action"] = "paid"
+        return result
+    except ValueError:
+        if attempt_number >= MAX_RETRIES:
+            return {
+                "invoice_id": invoice.id,
+                "action": "suspend",
+                "reason": (
+                    f"Payment failed after {MAX_RETRIES} "
+                    "retries — suspending subscription"
+                ),
+                "attempt": attempt_number,
+            }
+        return schedule_retry(invoice.id, attempt_number + 1)
