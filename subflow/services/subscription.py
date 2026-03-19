@@ -11,8 +11,13 @@ from datetime import datetime, timedelta, timezone
 
 from subflow.models.subscription import Plan, Subscription
 
-# Grace period after expiration before full account lockout
-GRACE_PERIOD_DAYS = 7
+# Grace period after expiration before full account lockout,
+# tiered by plan level
+GRACE_PERIOD_DAYS: dict[str, int] = {
+    "free": 3,
+    "pro": 7,
+    "enterprise": 14,
+}
 
 # Valid state transitions: current_state -> list of allowed next states
 VALID_TRANSITIONS: dict[str, list[str]] = {
@@ -53,19 +58,60 @@ def transition_subscription(
     return subscription
 
 
+def get_grace_period_days(plan_tier: str) -> int:
+    """Return the grace period duration for a given plan tier.
+
+    Falls back to the free-tier grace period if the plan tier
+    is not recognised.
+
+    Args:
+        plan_tier: The plan name (free, pro, enterprise).
+
+    Returns:
+        Number of grace period days for the tier.
+    """
+    return GRACE_PERIOD_DAYS.get(plan_tier, GRACE_PERIOD_DAYS["free"])
+
+
+def is_read_only_access(subscription: Subscription) -> bool:
+    """Check whether the subscription is in read-only mode.
+
+    During the grace period after expiration, customers retain
+    read-only access to their data but cannot perform writes.
+
+    Args:
+        subscription: The subscription to check.
+
+    Returns:
+        True if the subscription is expired and within its
+        grace period (read-only access).
+    """
+    if subscription.status != "expired":
+        return False
+    grace = check_grace_period(subscription)
+    return grace["in_grace_period"]
+
+
 def check_grace_period(
     subscription: Subscription,
 ) -> dict[str, object]:
     """Check whether a subscription is within its post-expiry grace period.
 
+    Grace period duration depends on the plan tier:
+        - free: 3 days
+        - pro: 7 days
+        - enterprise: 14 days
+
     Returns a dict with:
         - in_grace_period: bool
+        - is_read_only: bool
         - days_remaining: int (0 if not in grace period)
         - grace_expires_at: datetime | None
     """
     if subscription.status != "expired":
         return {
             "in_grace_period": False,
+            "is_read_only": False,
             "days_remaining": 0,
             "grace_expires_at": None,
         }
@@ -73,18 +119,23 @@ def check_grace_period(
     if subscription.current_period_end is None:
         return {
             "in_grace_period": False,
+            "is_read_only": False,
             "days_remaining": 0,
             "grace_expires_at": None,
         }
 
+    plan_tier = subscription.plan.name
+    grace_days = get_grace_period_days(plan_tier)
     grace_end = subscription.current_period_end + timedelta(
-        days=GRACE_PERIOD_DAYS,
+        days=grace_days,
     )
     now = datetime.now(timezone.utc)
     remaining = (grace_end - now).days
 
+    in_grace = remaining > 0
     return {
-        "in_grace_period": remaining > 0,
+        "in_grace_period": in_grace,
+        "is_read_only": in_grace,
         "days_remaining": max(0, remaining),
         "grace_expires_at": grace_end,
     }
