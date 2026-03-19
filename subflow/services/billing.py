@@ -89,3 +89,31 @@ def calculate_next_billing_date(
     if billing_cycle == "annual":
         return current_period_end + timedelta(days=365)
     return current_period_end + timedelta(days=30)
+
+
+def calculate_proration(
+    old_price: float,
+    new_price: float,
+    days_remaining: int,
+    days_in_cycle: int,
+) -> float:
+    """Calculate prorated charge when upgrading plans.
+
+    Upgrades are charged the prorated price difference immediately.
+    The charge covers only the remaining days in the current cycle.
+
+    Args:
+        old_price: Monthly price of the current plan.
+        new_price: Monthly price of the new plan.
+        days_remaining: Days left in the current billing cycle.
+        days_in_cycle: Total days in the billing cycle.
+
+    Returns:
+        The prorated charge amount (>= 0). Returns 0 if
+        the new plan is cheaper (downgrades use credits).
+    """
+    if new_price <= old_price:
+        return 0.0
+    price_diff = new_price - old_price
+    daily_rate = price_diff / days_in_cycle
+    return round(daily_rate * days_remaining, 2)
