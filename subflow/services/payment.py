@@ -271,3 +271,167 @@ def process_retry(
                 "attempt": attempt_number,
             }
         return schedule_retry(invoice.id, attempt_number + 1)
+
+
+# Maximum payment methods per customer
+MAX_PAYMENT_METHODS = 5
+
+# Days before card expiry to send warning notification
+CARD_EXPIRY_WARNING_DAYS = 30
+
+# Days after card expiry to block charges
+CARD_EXPIRY_BLOCK_DAYS = 7
+
+
+def add_payment_method(
+    customer_id: str,
+    method_type: str,
+    current_method_count: int,
+    is_default: bool = False,
+) -> dict[str, object]:
+    """Add a payment method for a customer.
+
+    Enforces a maximum of MAX_PAYMENT_METHODS (5) per customer.
+    The first method added is automatically set as default.
+
+    Args:
+        customer_id: The customer adding the method.
+        method_type: One of card, ach, wire.
+        current_method_count: How many methods the customer already has.
+        is_default: Whether to set this as the default method.
+
+    Returns:
+        Result with the added method details.
+
+    Raises:
+        ValueError: If method limit reached or type is invalid.
+    """
+    if method_type not in SUPPORTED_PAYMENT_METHODS:
+        raise ValueError(
+            f"Unsupported payment method: {method_type!r}. "
+            f"Supported: {SUPPORTED_PAYMENT_METHODS}"
+        )
+
+    if current_method_count >= MAX_PAYMENT_METHODS:
+        raise ValueError(
+            f"Maximum {MAX_PAYMENT_METHODS} payment methods allowed. "
+            f"Customer {customer_id} already has {current_method_count}."
+        )
+
+    # First method is always default
+    if current_method_count == 0:
+        is_default = True
+
+    return {
+        "customer_id": customer_id,
+        "method_type": method_type,
+        "is_default": is_default,
+        "status": "added",
+    }
+
+
+def remove_payment_method(
+    customer_id: str,
+    method_id: str,
+    is_default: bool,
+    total_methods: int,
+) -> dict[str, object]:
+    """Remove a payment method from a customer.
+
+    Cannot remove the last payment method (one must always remain
+    as default). Cannot remove the default method unless it is
+    the only one remaining.
+
+    Args:
+        customer_id: The customer removing the method.
+        method_id: The method to remove.
+        is_default: Whether this is the default method.
+        total_methods: Total methods the customer currently has.
+
+    Returns:
+        Removal result.
+
+    Raises:
+        ValueError: If trying to remove the only method or
+            the default without reassigning.
+    """
+    if total_methods <= 1:
+        raise ValueError(
+            "Cannot remove the last payment method. "
+            "At least one method must remain on file."
+        )
+
+    if is_default:
+        raise ValueError(
+            "Cannot remove the default payment method. "
+            "Set another method as default first."
+        )
+
+    return {
+        "customer_id": customer_id,
+        "method_id": method_id,
+        "status": "removed",
+    }
+
+
+def check_card_expiry(
+    expiry_date: datetime,
+    check_date: datetime | None = None,
+) -> dict[str, object]:
+    """Check card expiry status and determine required action.
+
+    Notifications are sent CARD_EXPIRY_WARNING_DAYS (30) days
+    before expiry. Charges are blocked CARD_EXPIRY_BLOCK_DAYS
+    (7) days after expiry. If the only payment method expires,
+    the invoice fails and enters the dunning flow.
+
+    Args:
+        expiry_date: The card's expiration date.
+        check_date: Date to check against (defaults to now).
+
+    Returns:
+        Expiry status with action (valid, warn, block).
+    """
+    if check_date is None:
+        check_date = datetime.now(timezone.utc)
+
+    days_until_expiry = (expiry_date - check_date).days
+
+    if days_until_expiry < -CARD_EXPIRY_BLOCK_DAYS:
+        return {
+            "status": "blocked",
+            "action": "block_charges",
+            "days_since_expiry": -days_until_expiry,
+            "block_threshold_days": CARD_EXPIRY_BLOCK_DAYS,
+            "message": (
+                "Card expired — charges blocked. "
+                "Invoice will enter dunning flow."
+            ),
+        }
+
+    if days_until_expiry <= 0:
+        return {
+            "status": "expired",
+            "action": "warn",
+            "days_since_expiry": -days_until_expiry,
+            "block_in_days": CARD_EXPIRY_BLOCK_DAYS + days_until_expiry,
+            "message": "Card has expired. Update before charges are blocked.",
+        }
+
+    if days_until_expiry <= CARD_EXPIRY_WARNING_DAYS:
+        return {
+            "status": "expiring_soon",
+            "action": "notify",
+            "days_until_expiry": days_until_expiry,
+            "warning_threshold_days": CARD_EXPIRY_WARNING_DAYS,
+            "message": (
+                f"Card expires in {days_until_expiry} days. "
+                "Please update your payment method."
+            ),
+        }
+
+    return {
+        "status": "valid",
+        "action": "none",
+        "days_until_expiry": days_until_expiry,
+    }
