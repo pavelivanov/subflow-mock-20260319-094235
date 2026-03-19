@@ -117,3 +117,31 @@ def calculate_proration(
     price_diff = new_price - old_price
     daily_rate = price_diff / days_in_cycle
     return round(daily_rate * days_remaining, 2)
+
+
+def calculate_downgrade_credit(
+    old_price: float,
+    new_price: float,
+    days_remaining: int,
+    days_in_cycle: int,
+) -> float:
+    """Calculate credit issued when downgrading plans.
+
+    Downgrades do not refund immediately — instead a credit is
+    generated and applied to the next invoice. The credit is
+    calculated to the day based on remaining cycle time.
+
+    Args:
+        old_price: Monthly price of the current plan.
+        new_price: Monthly price of the new (cheaper) plan.
+        days_remaining: Days left in the current billing cycle.
+        days_in_cycle: Total days in the billing cycle.
+
+    Returns:
+        The credit amount (>= 0). Returns 0 if upgrading.
+    """
+    if new_price >= old_price:
+        return 0.0
+    price_diff = old_price - new_price
+    daily_rate = price_diff / days_in_cycle
+    return round(daily_rate * days_remaining, 2)
