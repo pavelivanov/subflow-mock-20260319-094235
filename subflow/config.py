@@ -50,3 +50,24 @@ BULK_DISCOUNT_TIERS: dict[int, float] = {
 
 # Above this seat count, use custom pricing (no automatic discount)
 CUSTOM_PRICING_THRESHOLD = 250
+
+# Trial abuse prevention
+MAX_TRIALS_PER_DOMAIN = 1
+TRIAL_DOMAIN_WINDOW_DAYS = 90
+
+# Disposable email domains that are blocked from trials
+DISPOSABLE_EMAIL_DOMAINS = [
+    "mailinator.com",
+    "guerrillamail.com",
+    "tempmail.com",
+    "throwaway.email",
+    "yopmail.com",
+    "sharklasers.com",
+    "guerrillamailblock.com",
+    "grr.la",
+    "dispostable.com",
+    "maildrop.cc",
+]
+
+# Free tier trial requires a card on file
+FREE_TRIAL_REQUIRES_CARD = True
