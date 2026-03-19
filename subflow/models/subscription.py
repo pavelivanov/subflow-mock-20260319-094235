@@ -62,3 +62,5 @@ class Subscription:
     def is_active(self) -> bool:
         """Return True if the subscription is in a usable state."""
         return self.status in ("trial", "active")
+
+    seat_count: int = 1
