@@ -443,3 +443,52 @@ def apply_combined_discount(
         "discount_amount": discount_amount,
         "final_price": final_price,
     }
+
+
+def generate_invoice_with_tax(
+    invoice_id: str,
+    subscription: Subscription,
+    country: str,
+    state: str | None = None,
+    is_b2b: bool = False,
+    tax_exempt: bool = False,
+    billing_cycle: str = "monthly",
+) -> dict[str, object]:
+    """Generate an invoice with tax calculation included.
+
+    Creates the base invoice then calculates and applies
+    applicable taxes based on the customer's location.
+
+    Args:
+        invoice_id: Unique identifier for the new invoice.
+        subscription: The subscription to bill.
+        country: Customer's country code.
+        state: Customer's state code (US only).
+        is_b2b: Whether the customer is a business.
+        tax_exempt: Whether the customer has a tax exemption.
+        billing_cycle: One of "monthly" or "annual".
+
+    Returns:
+        Invoice details with tax breakdown.
+    """
+    from subflow.services.tax import calculate_tax
+
+    invoice = generate_invoice(invoice_id, subscription, billing_cycle)
+    tax_result = calculate_tax(
+        amount=invoice.total_amount,
+        country=country,
+        state=state,
+        is_b2b=is_b2b,
+        tax_exempt=tax_exempt,
+    )
+
+    return {
+        "invoice_id": invoice.id,
+        "subtotal": invoice.total_amount,
+        "tax_amount": tax_result["tax_amount"],
+        "tax_rate": tax_result["tax_rate"],
+        "tax_type": tax_result["tax_type"],
+        "total_with_tax": round(
+            invoice.total_amount + tax_result["tax_amount"], 2,
+        ),
+    }
